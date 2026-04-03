@@ -1,0 +1,14 @@
+[
+    {
+        "relation": [
+            "delegate_permission/common.handle_all_urls"
+        ],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "app.vercel.caltracker_nu.twa",
+            "sha256_cert_fingerprints": [
+                "71:6B:1E:EF:EF:3D:E8:C2:4B:02:31:29:BE:A7:DA:4C:3E:41:9B:C1:D9:76:C8:5A:08:01:89:C8:62:21:33:AC"
+            ]
+        }
+    }
+]

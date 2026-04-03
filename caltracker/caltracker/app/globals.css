@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  
+  --color-background: #0a0a0a;
+  --color-foreground: #ededed;
+  
+  --color-card: #171717;
+  --color-card-foreground: #ededed;
+  
+  --color-popover: #171717;
+  --color-popover-foreground: #ededed;
+  
+  --color-primary: #ffffff;
+  --color-primary-foreground: #000000;
+  
+  --color-secondary: #262626;
+  --color-secondary-foreground: #ededed;
+  
+  --color-muted: #262626;
+  --color-muted-foreground: #a3a3a3;
+  
+  --color-accent: #262626;
+  --color-accent-foreground: #ededed;
+  
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #fafafa;
+  
+  --color-border: #262626;
+  --color-input: #262626;
+  --color-ring: #ffffff;
+
+  /* Custom Status Colors */
+  --color-status-cru: #10b981; /* Emerald-500 */
+  --color-status-cuit: #f97316; /* Orange-500 */
+  --color-status-protein: #3b82f6; /* Blue-500 */
+}
+
+/* Custom Utilities */
+@utility glass-panel {
+  @apply bg-neutral-900/60 backdrop-blur-xl border border-white/10 shadow-lg;
+}
+
+@utility container-centered {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Base Styles */
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Animations from Design System */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@utility animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@utility animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
