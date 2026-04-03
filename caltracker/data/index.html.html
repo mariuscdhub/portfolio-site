@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CalTracker - Gestion Frigo & Précision Nutritionnelle</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        background: '#0a0a0a',
+                        card: '#171717', // neutral-900
+                        border: '#262626', // neutral-800
+                        secondary: '#666666',
+                        neutral: {
+                            800: '#262626',
+                            900: '#171717',
+                            950: '#0a0a0a',
+                        },
+                        emerald: { 400: '#34d399', 500: '#10b981' },
+                        orange: { 400: '#fb923c', 500: '#f97316' },
+                        blue: { 400: '#60a5fa', 500: '#3b82f6' }
+                    },
+                    animation: {
+                        'wave-slow': 'wave 15s ease-in-out infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'fadeIn': 'fadeIn 0.6s ease-out forwards',
+                        'slideUp': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                    },
+                    keyframes: {
+                        wave: { '0%, 100%': { transform: 'translateY(0) scale(1)' }, '50%': { transform: 'translateY(-20px) scale(1.02)' } },
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } },
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { opacity: '0', transform: 'translateY(40px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: white;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Essential Utils */
+        .glass-panel {
+            background: rgba(23, 23, 23, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-primary {
+            background: white;
+            color: black;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tabular-nums {
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* New Design Elements */
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image:
+                linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            mask-image: radial-gradient(circle at center, black 50%, transparent 100%);
+            -webkit-mask-image: radial-gradient(circle at center, black 50%, transparent 100%);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .flare-emerald {
+            position: absolute;
+            top: -100px;
+            left: -100px;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(52, 211, 153, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+            filter: blur(80px);
+            pointer-events: none;
+        }
+
+        .flare-orange {
+            position: absolute;
+            top: 20%;
+            right: -100px;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(251, 146, 60, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
+            filter: blur(80px);
+            pointer-events: none;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            background: rgba(30, 30, 30, 0.8);
+        }
+
+        .wave-line {
+            position: absolute;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.15), transparent);
+            width: 1px;
+            bottom: 0;
+        }
+
+        .waveform-bg {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            overflow: hidden;
+            opacity: 0.3;
+            mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- ICONS (EXPANDED) ---
+        const Icons = {
+            Search: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>,
+            Plus: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>,
+            Trash2: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>,
+            PieChart: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83" /><path d="M22 12A10 10 0 0 0 12 2v10z" /></svg>,
+            Utensils: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></svg>,
+            ArrowRight: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>,
+            User: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
+            LogOut: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>,
+            X: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 18 18" /></svg>,
+            Check: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>,
+            Refrigerator: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 6a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6Z" /><path d="M5 10h14" /><path d="M15 2v22" /></svg>,
+            Cloud: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19c0-1.7-1.3-3-3-3h-1.1c-.2-3.1-2.9-5.5-6-5.5a6 6 0 0 0-5.8 4.7 3.5 3.5 0 0 0 3.4 3.8h12.5z" /></svg>,
+            PlayCircle: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" /></svg>,
+            Leaf: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 13 2 13 0 0-9 0-11 5z" /></svg>,
+            ArrowDown: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" /></svg>,
+            Flame: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.2-2.2.5-3.3a9 9 0 0 0 6.666 4.908Z" /></svg>,
+            BrainCircuit: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4.5a2.5 2.5 0 0 0-4.96-.46 2.5 2.5 0 0 0-1.98 3 2.5 2.5 0 0 0-1.32 3 2.5 2.5 0 0 0 0 2 2.5 2.5 0 0 0 1.32 3 2.5 2.5 0 0 0 1.98 3 2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 4.96.46 2.5 2.5 0 0 0 1.98-3 2.5 2.5 0 0 0 1.32-3 2.5 2.5 0 0 0 0-2 2.5 2.5 0 0 0-1.32-3 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 12 4.5Z" /><path d="M12 8a6 6 0 1 0 0 12v-3" /></svg>,
+            Snowflake: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="2" x2="22" y1="12" y2="12" /><line x1="12" x2="12" y1="2" y2="22" /><path d="m20 16-4-4 4-4" /><path d="m4 8 4 4-4 4" /><path d="m16 4-4 4-4-4" /><path d="m8 20 4-4 4 4" /></svg>,
+            ChefHat: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z" /><line x1="6" x2="18" y1="17" y2="17" /></svg>,
+            Database: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" /><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" /></svg>,
+            Dumbbell: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6.5 6.5 11 11" /><path d="m21 21-1-1" /><path d="m3 3 1 1" /><path d="m18 22 4-4" /><path d="m2 6 4-4" /><path d="m3 10 7-7" /><path d="m14 21 7-7" /></svg>,
+            Container: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.9 9a1.9 1.9 0 0 0-.25-.8l-2.4-5.2a1.6 1.6 0 0 0-1.5-.9h-9.5a1.6 1.6 0 0 0-1.5.9l-2.4 5.2h17.55Z" /><path d="M3.55 9H20.9l-1.65 11.2a2.3 2.3 0 0 1-2.25 1.8h-10a2.3 2.3 0 0 1-2.3-1.8Z" /></svg>,
+            Menu: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></svg>,
+            ChevronRight: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>,
+            BookOpen: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>,
+            Save: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>,
+            Edit2: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>,
+            Filter: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>,
+            ArrowLeft: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>,
+            RefreshCw: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>,
+            Copy: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>,
+            Target: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>,
+            ArrowRightLeft: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m16 7 5 5-5 5" /><path d="M21 12H7" /><path d="m8 21-5-5 5-5" /><path d="M3 16h14" /></svg>,
+            TrendingUp: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg>,
+            ChevronLeft: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>,
+            Award: (p) => <svg {...p} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7" /><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></svg>,
+        };
+
+        // --- FIREBASE CONFIG (LIVE) ---
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+            apiKey: "AIzaSyCiTyM4ig2Ac43irR-kHU-3keQHQa4P_Og",
+            authDomain: "caltracker-7dd7f.firebaseapp.com",
+            projectId: "caltracker-7dd7f",
+            storageBucket: "caltracker-7dd7f.firebasestorage.app",
+            messagingSenderId: "1085183267576",
+            appId: "1:1085183267576:web:7b6bdfec572a6de524a10d",
+            measurementId: "G-EMLH6L70JE"
+        };
+
+        // --- MOCK IMPLEMENTATION (LOCAL STORAGE) ---
+        class MockAuth {
+            constructor() { this.currentUser = JSON.parse(localStorage.getItem('mock_user')) || null; this.listeners = []; }
+            onAuthStateChanged(cb) { this.listeners.push(cb); cb(this.currentUser); return () => this.listeners = this.listeners.filter(f => f !== cb); }
+            async signInWithEmailAndPassword(e, p) {
+                if (!localStorage.getItem('mock_user_creds')) throw new Error("Utilisateur inconnu (Mode Démo: inscrivez-vous d'abord)");
+                const c = JSON.parse(localStorage.getItem('mock_user_creds'));
+                if (c.e === e && c.p === p) { this.currentUser = { uid: 'mock_uid_123', email: e }; localStorage.setItem('mock_user', JSON.stringify(this.currentUser)); this.notify(); return; }
+                throw new Error("Mot de passe incorrect");
+            }
+            async createUserWithEmailAndPassword(e, p) {
+                this.currentUser = { uid: 'mock_uid_123', email: e };
+                localStorage.setItem('mock_user', JSON.stringify(this.currentUser));
+                localStorage.setItem('mock_user_creds', JSON.stringify({ e, p }));
+                this.notify();
+            }
+            async signOut() { this.currentUser = null; localStorage.removeItem('mock_user'); this.notify(); }
+            notify() { this.listeners.forEach(cb => cb(this.currentUser)); }
+        }
+
+        class MockFirestore {
+            constructor() { this.data = JSON.parse(localStorage.getItem('mock_db')) || { users: {} }; }
+            _save() { localStorage.setItem('mock_db', JSON.stringify(this.data)); }
+            collection(path) { return new MockCollection(this, path); }
+        }
+
+        class MockCollection {
+            constructor(db, path) { this.db = db; this.path = path; }
+            doc(id) { return new MockDoc(this.db, `${this.path}/${id}`); }
+            add(data) {
+                const id = Date.now().toString();
+                return this.doc(id).set(data).then(() => ({ id }));
+            }
+            orderBy() { return this; } // Ignored in mock
+            limit() { return this; } // Ignored in mock
+            onSnapshot(cb) {
+                // Polling for changes (simple implementation) or just one-time fetch
+                const getDocs = () => {
+                    const keys = Object.keys(this.db.data).filter(k => k.startsWith(this.path + '/'));
+                    return { docs: keys.map(k => ({ id: k.split('/').pop(), data: () => this.db.data[k] })) };
+                };
+                cb(getDocs());
+                const interval = setInterval(() => cb(getDocs()), 1000); // Check for local formatting updates
+                return () => clearInterval(interval);
+            }
+        }
+
+        class MockDoc {
+            constructor(db, path) { this.db = db; this.path = path; }
+            set(data, opts) {
+                if (opts?.merge) this.db.data[this.path] = { ...this.db.data[this.path], ...data };
+                else this.db.data[this.path] = data;
+                this.db._save(); return Promise.resolve();
+            }
+            update(data) { return this.set(data, { merge: true }); }
+            delete() { delete this.db.data[this.path]; this.db._save(); return Promise.resolve(); }
+            collection(subPath) { return new MockCollection(this.db, `${this.path}/${subPath}`); }
+            onSnapshot(cb) {
+                const getDoc = () => ({ exists: !!this.db.data[this.path], data: () => this.db.data[this.path] });
+                cb(getDoc());
+                const interval = setInterval(() => cb(getDoc()), 1000);
+                return () => clearInterval(interval);
+            }
+        }
+
+        let auth, db, isDemo = false;
+
+        // Init Logic
+        if (firebaseConfig.apiKey === "API_KEY_ICI" || firebaseConfig.apiKey.includes("API_KEY")) {
+            console.warn("Using MOCK FIREBASE (Demo Mode)");
+            isDemo = true;
+            auth = new MockAuth();
+            db = new MockFirestore();
+            // Mock server timestamp
+            window.firebase = { firestore: { FieldValue: { serverTimestamp: () => new Date().toISOString(), arrayUnion: (val) => [val] } } };
+        } else {
+            try { if (typeof firebase !== 'undefined' && !firebase.apps.length) firebase.initializeApp(firebaseConfig); if (typeof firebase !== 'undefined') { auth = firebase.auth(); db = firebase.firestore(); db.enablePersistence().catch(e => console.log(e)); } } catch (e) { }
+        }
+
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- CONSTANTS ---
+        const INITIAL_FOODS = [
+            { id: 101, name: 'Riz Basmati', kcal: 360, protein: 8, carb: 78, fat: 1, type: 'cru' },
+            { id: 102, name: 'Riz Basmati', kcal: 120, protein: 2.5, carb: 25, fat: 0.3, type: 'cuit' },
+            { id: 103, name: 'Pâtes (Blé)', kcal: 350, protein: 12, carb: 70, fat: 1.5, type: 'cru' },
+            { id: 104, name: 'Pâtes (Blé)', kcal: 130, protein: 4.5, carb: 25, fat: 0.5, type: 'cuit' },
+            { id: 105, name: 'Pomme de terre', kcal: 80, protein: 2, carb: 17, fat: 0.1, type: 'cru' },
+            { id: 106, name: 'Pomme de terre (Vapeur)', kcal: 85, protein: 2, carb: 19, fat: 0.1, type: 'cuit' },
+            { id: 107, name: 'Pain Complet', kcal: 250, protein: 9, carb: 45, fat: 3, type: 'cru' },
+            { id: 108, name: 'Pain Blanc (Baguette)', kcal: 280, protein: 8, carb: 55, fat: 1, type: 'cru' },
+            { id: 109, name: 'Quinoa', kcal: 370, protein: 14, carb: 64, fat: 6, type: 'cru' },
+            { id: 110, name: 'Quinoa', kcal: 120, protein: 4.4, carb: 21, fat: 1.9, type: 'cuit' },
+            { id: 111, name: 'Lentilles', kcal: 310, protein: 25, carb: 45, fat: 1, type: 'cru' },
+            { id: 112, name: 'Lentilles', kcal: 115, protein: 9, carb: 20, fat: 0.4, type: 'cuit' },
+            { id: 113, name: 'Flocons d\'Avoine', kcal: 370, protein: 13, carb: 59, fat: 7, type: 'cru' },
+            { id: 114, name: 'Semoule (Couscous)', kcal: 360, protein: 12, carb: 72, fat: 1, type: 'cru' },
+            { id: 115, name: 'Semoule (Couscous)', kcal: 110, protein: 3.5, carb: 22, fat: 0.5, type: 'cuit' },
+            { id: 201, name: 'Blanc de Poulet', kcal: 105, protein: 23, carb: 0, fat: 1.2, type: 'cru' },
+            { id: 202, name: 'Blanc de Poulet', kcal: 165, protein: 31, carb: 0, fat: 3.6, type: 'cuit' },
+            { id: 203, name: 'Steak Haché 5%', kcal: 130, protein: 20, carb: 0, fat: 5, type: 'cru' },
+            { id: 204, name: 'Steak Haché 5%', kcal: 170, protein: 26, carb: 0, fat: 6.5, type: 'cuit' },
+            { id: 250, name: 'Saumon', kcal: 208, protein: 20, carb: 0, fat: 13, type: 'cru' },
+            { id: 251, name: 'Saumon', kcal: 230, protein: 25, carb: 0, fat: 14, type: 'cuit' },
+            { id: 280, name: 'Oeuf', kcal: 140, protein: 12, carb: 0.7, fat: 9.5, type: 'cru' },
+            { id: 281, name: 'Oeuf (Dur/Plat)', kcal: 155, protein: 13, carb: 1.1, fat: 11, type: 'cuit' },
+            { id: 301, name: 'Carotte', kcal: 41, protein: 0.9, carb: 9.6, fat: 0.2, type: 'cru' },
+            { id: 302, name: 'Carotte', kcal: 35, protein: 0.8, carb: 8, fat: 0.2, type: 'cuit' },
+            { id: 303, name: 'Courgette', kcal: 17, protein: 1.2, carb: 3, fat: 0.1, type: 'cru' },
+            { id: 304, name: 'Courgette', kcal: 20, protein: 1.5, carb: 3.5, fat: 0.2, type: 'cuit' },
+            { id: 309, name: 'Tomate', kcal: 18, protein: 0.9, carb: 3.9, fat: 0.2, type: 'cru' },
+            { id: 312, name: 'Avocat', kcal: 160, protein: 2, carb: 9, fat: 15, type: 'cru' },
+            { id: 401, name: 'Pomme', kcal: 52, protein: 0.3, carb: 14, fat: 0.2, type: 'cru' },
+            { id: 402, name: 'Banane', kcal: 89, protein: 1.1, carb: 23, fat: 0.3, type: 'cru' },
+            { id: 501, name: 'Fromage Blanc 0%', kcal: 48, protein: 8, carb: 4, fat: 0.1, type: 'cru' },
+            { id: 601, name: 'Beurre', kcal: 717, protein: 0.8, carb: 0.1, fat: 81, type: 'cru' },
+            { id: 602, name: 'Huile d\'Olive', kcal: 884, protein: 0, carb: 0, fat: 100, type: 'cru' },
+        ];
+
+        // --- COMPONENTS ---
+        const WaveBackground = () => (<div className="waveform-bg flex justify-center items-end gap-3 px-4"> {[...Array(30)].map((_, i) => (<div key={i} className="wave-line" style={{ height: `${Math.random() * 40 + 10}%`, left: `${i * 3.3}%`, animation: `wave ${4 + Math.random() * 6}s ease-in-out infinite`, animationDelay: `${Math.random() * -5}s` }} />))} </div>);
+
+        // --- AUTH MODAL ---
+        const AuthModal = ({ onClose, onLoginSuccess }) => {
+            const [isLogin, setIsLogin] = useState(true);
+            const [email, setEmail] = useState('');
+            const [pass, setPass] = useState('');
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleAuth = async (e) => {
+                e.preventDefault(); setLoading(true); setError('');
+                try {
+                    if (!auth) throw new Error("Erreur interne: Auth non initialisé");
+                    isLogin ? await auth.signInWithEmailAndPassword(email, pass) : await auth.createUserWithEmailAndPassword(email, pass);
+                    onLoginSuccess();
+                } catch (err) { setError(err.message); } finally { setLoading(false); }
+            };
+
+            return (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
+                    <div className="glass-panel w-full max-w-sm rounded-3xl p-8 relative">
+                        <button onClick={onClose} className="absolute top-4 right-4 text-secondary hover:text-white"><Icons.X size={20} /></button>
+                        <h2 className="text-2xl font-black text-center mb-6">{isLogin ? 'CONNEXION' : 'INSCRIPTION'}</h2>
+                        {isDemo && <div className="bg-orange-500/20 text-orange-400 text-xs p-2 rounded mb-4 text-center border border-orange-500/30">Mode Démo (Local Storage) actif.<br />Aucune clé Firebase détectée.</div>}
+                        <form onSubmit={handleAuth} className="space-y-4">
+                            <input type="email" placeholder="Email" className="w-full bg-black/50 border border-white/10 rounded-xl p-3 outline-none focus:border-white transition-colors" value={email} onChange={e => setEmail(e.target.value)} required />
+                            <input type="password" placeholder="Mot de passe" className="w-full bg-black/50 border border-white/10 rounded-xl p-3 outline-none focus:border-white transition-colors" value={pass} onChange={e => setPass(e.target.value)} required />
+                            {error && <p className="text-red-500 text-xs text-center">{error}</p>}
+                            <button type="submit" disabled={loading} className="w-full btn-primary py-3 rounded-xl flex justify-center items-center gap-2"> {loading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div> : (isLogin ? 'SE CONNECTER' : 'CRÉER UN COMPTE')} </button>
+                        </form>
+                        <div className="mt-6 text-center"> <button onClick={() => setIsLogin(!isLogin)} className="text-xs text-secondary hover:text-white underline decoration-dashed underline-offset-4"> {isLogin ? 'Pas de compte ? Créer un compte' : 'Déjà un compte ? Se connecter'} </button> </div>
+                    </div>
+                </div>
+            );
+        };
+
+
+        // --- LANDING PAGE ---
+        const Landing = () => {
+            const [showAuth, setShowAuth] = useState(false);
+
+            return (
+                <div className="min-h-screen bg-background overflow-x-hidden">
+                    {showAuth && <AuthModal onClose={() => setShowAuth(false)} onLoginSuccess={() => setShowAuth(false)} />}
+                    <div className="bg-grid" />
+                    <div className="flare-emerald" />
+                    <div className="flare-orange" />
+
+                    {/* Header */}
+                    <header className="relative z-10 px-6 py-6 flex justify-between items-center max-w-7xl mx-auto w-full">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-orange-400 text-black rounded-xl flex items-center justify-center font-black italic text-xl">C</div>
+                            <span className="text-xl font-bold tracking-tight text-white">CALTRACKER</span>
+                        </div>
+                        <button onClick={() => setShowAuth(true)} className="btn-primary px-6 py-2.5 rounded-xl font-bold text-sm hover:scale-105 transition-transform">Se connecter</button>
+                    </header>
+
+                    {/* Hero Section */}
+                    <section className="relative z-10 px-6 py-20 md:py-32">
+                        <WaveBackground />
+                        <div className="max-w-6xl mx-auto text-center space-y-8 animate-fadeIn">
+                            <div className="inline-block px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-bold mb-4">
+                                🔥 La révolution du tracking nutritionnel
+                            </div>
+                            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-none bg-gradient-to-r from-emerald-400 via-white to-orange-400 bg-clip-text text-transparent animate-float">
+                                UNLOCK YOUR<br />NUTRITION FLOW
+                            </h1>
+                            <p className="text-lg md:text-2xl text-secondary max-w-3xl mx-auto leading-relaxed">
+                                Le seul tracker qui comprend vraiment les bodybuilders. <span className="text-emerald-400 font-bold">Cru vs Cuit</span>, recettes intelligentes, sync cloud.
+                                <span className="text-white font-semibold"> Tout en un seul endroit.</span>
+                            </p>
+                            <div className="flex gap-4 justify-center flex-wrap pt-4">
+                                <button onClick={() => setShowAuth(true)} className="btn-primary px-10 py-5 rounded-2xl text-lg font-bold flex items-center gap-2 hover:scale-105 transition-transform shadow-2xl">
+                                    Commencer gratuitement <Icons.ArrowRight size={22} />
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Problem Section */}
+                    <section className="relative z-10 px-6 py-20 bg-gradient-to-b from-transparent to-neutral-900/50">
+                        <div className="max-w-6xl mx-auto">
+                            <div className="text-center mb-16">
+                                <h2 className="text-4xl md:text-5xl font-black text-white mb-6">Le problème que vous connaissez trop bien</h2>
+                                <p className="text-xl text-secondary max-w-2xl mx-auto">Les trackers classiques ne comprennent pas les vrais besoins des athlètes</p>
+                            </div>
+                            <div className="grid md:grid-cols-3 gap-6">
+                                <div className="glass-panel p-6 rounded-2xl border-l-4 border-red-500/50">
+                                    <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mb-4">
+                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M15 5L5 15M5 5L15 15" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="font-bold text-lg text-white mb-2">Cru vs Cuit ignoré</h3>
+                                    <p className="text-sm text-secondary">100g de riz cru ≠ 100g de riz cuit. Les apps classiques ne font pas la différence.</p>
+                                </div>
+                                <div className="glass-panel p-6 rounded-2xl border-l-4 border-red-500/50">
+                                    <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mb-4">
+                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M15 5L5 15M5 5L15 15" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="font-bold text-lg text-white mb-2">Recettes compliquées</h3>
+                                    <p className="text-sm text-secondary">Calculer les macros de vos meal preps demande des heures de calculs manuels.</p>
+                                </div>
+                                <div className="glass-panel p-6 rounded-2xl border-l-4 border-red-500/50">
+                                    <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mb-4">
+                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M15 5L5 15M5 5L15 15" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="font-bold text-lg text-white mb-2">Données perdues</h3>
+                                    <p className="text-sm text-secondary">Changez de téléphone ? Vos 6 mois de tracking disparaissent.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Solution Section */}
+                    <section className="relative z-10 px-6 py-20">
+                        <div className="max-w-6xl mx-auto">
+                            <div className="text-center mb-16">
+                                <h2 className="text-4xl md:text-5xl font-black text-white mb-6">Notre solution simple et puissante</h2>
+                                <p className="text-xl text-secondary max-w-2xl mx-auto">Conçu par un bodybuilder, pour les bodybuilders</p>
+                            </div>
+                            <div className="grid md:grid-cols-2 gap-8">
+                                <div className="glass-panel p-8 rounded-3xl space-y-4 hover:scale-105 transition-transform animate-float" style={{ animationDelay: '0s' }}>
+                                    <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center">
+                                        <Icons.Leaf size={32} className="text-emerald-400" />
+                                    </div>
+                                    <h3 className="font-black text-2xl text-white">Cru vs Cuit intelligent</h3>
+                                    <p className="text-secondary leading-relaxed">
+                                        Marquez chaque aliment comme cru ou cuit. L'app utilise automatiquement les bonnes valeurs nutritionnelles.
+                                        <span className="text-emerald-400 font-semibold"> Fini les erreurs de calcul.</span>
+                                    </p>
+                                    <div className="flex gap-2 pt-2">
+                                        <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-xs font-bold">CRU</span>
+                                        <span className="px-3 py-1 bg-orange-500/10 border border-orange-500/30 rounded-full text-orange-400 text-xs font-bold">CUIT</span>
+                                    </div>
+                                </div>
+
+                                <div className="glass-panel p-8 rounded-3xl space-y-4 hover:scale-105 transition-transform animate-float" style={{ animationDelay: '0.2s' }}>
+                                    <div className="w-16 h-16 bg-orange-500/20 rounded-2xl flex items-center justify-center">
+                                        <Icons.ChefHat size={32} className="text-orange-400" />
+                                    </div>
+                                    <h3 className="font-black text-2xl text-white">Recettes automatisées</h3>
+                                    <p className="text-secondary leading-relaxed">
+                                        Composez vos recettes en quelques clics. Les macros se calculent automatiquement.
+                                        <span className="text-orange-400 font-semibold"> Meal prep en 2 minutes.</span>
+                                    </p>
+                                    <div className="pt-2 text-sm text-secondary font-mono">
+                                        200g poulet + 150g riz + légumes = <span className="text-emerald-400 font-bold">520 kcal calculées</span>
+                                    </div>
+                                </div>
+
+                                <div className="glass-panel p-8 rounded-3xl space-y-4 hover:scale-105 transition-transform animate-float" style={{ animationDelay: '0.4s' }}>
+                                    <div className="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center">
+                                        <Icons.Database size={32} className="text-blue-400" />
+                                    </div>
+                                    <h3 className="font-black text-2xl text-white">Frigo virtuel</h3>
+                                    <p className="text-secondary leading-relaxed">
+                                        Ajoutez vos aliments personnalisés. Créez votre propre base de données.
+                                        <span className="text-blue-400 font-semibold"> Votre nutrition, vos règles.</span>
+                                    </p>
+                                </div>
+
+                                <div className="glass-panel p-8 rounded-3xl space-y-4 hover:scale-105 transition-transform animate-float" style={{ animationDelay: '0.6s' }}>
+                                    <div className="w-16 h-16 bg-purple-500/20 rounded-2xl flex items-center justify-center">
+                                        <Icons.Cloud size={32} className="text-purple-400" />
+                                    </div>
+                                    <h3 className="font-black text-2xl text-white">Sync cloud permanent</h3>
+                                    <p className="text-secondary leading-relaxed">
+                                        Vos données sauvegardées en temps réel. Accessible depuis n'importe quel appareil.
+                                        <span className="text-purple-400 font-semibold"> Jamais de perte de données.</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+
+
+                    {/* CTA Final */}
+                    <section className="relative z-10 px-6 py-20">
+                        <div className="max-w-4xl mx-auto text-center glass-panel p-12 rounded-3xl space-y-6 animate-float">
+                            <h2 className="text-4xl md:text-5xl font-black text-white">Prêt à optimiser votre nutrition ?</h2>
+                            <p className="text-xl text-secondary">Rejoignez des milliers d'athlètes qui ont transformé leur tracking</p>
+                            <button onClick={() => setShowAuth(true)} className="btn-primary px-12 py-5 rounded-2xl text-xl font-bold inline-flex items-center gap-3 hover:scale-105 transition-transform shadow-2xl">
+                                Commencer maintenant <Icons.ArrowRight size={24} />
+                            </button>
+                        </div>
+                    </section>
+
+                    {/* Footer */}
+                    <footer className="relative z-10 px-6 py-12 border-t border-white/5">
+                        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-orange-400 text-black rounded-lg flex items-center justify-center font-black italic">C</div>
+                                <span className="font-bold text-white">CALTRACKER</span>
+                            </div>
+                            <p className="text-sm text-secondary">© 2026 CalTracker. Pour les athlètes, par un athlète.</p>
+                        </div>
+                    </footer>
+                </div>
+            );
+        };
+
+
+        // --- UTILITIES: DATE & STREAK HELPERS ---
+        const formatDate = (date) => {
+            const d = new Date(date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const isToday = (date) => {
+            const today = formatDate(new Date());
+            const checkDate = typeof date === 'string' ? date : formatDate(date);
+            return today === checkDate;
+        };
+
+        const isSameDay = (date1, date2) => {
+            return formatDate(date1) === formatDate(date2);
+        };
+
+        const getMonthDays = (year, month) => {
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const days = [];
+
+            // Add padding for first week
+            const firstDayOfWeek = firstDay.getDay();
+            for (let i = 0; i < firstDayOfWeek; i++) {
+                days.push(null);
+            }
+
+            // Add all days of month
+            for (let day = 1; day <= lastDay.getDate(); day++) {
+                days.push(new Date(year, month, day));
+            }
+
+            return days;
+        };
+
+        const calculateStreak = (dailySummaries) => {
+            if (!dailySummaries || dailySummaries.length === 0) {
+                return { current: 0, longest: 0, lastActive: null };
+            }
+
+            // Sort by date descending
+            const sorted = [...dailySummaries].sort((a, b) => b.date.localeCompare(a.date));
+
+            let currentStreak = 0;
+            let longestStreak = 0;
+            let tempStreak = 0;
+            let lastActive = null;
+
+            // Calculate current streak (from today backwards)
+            const today = formatDate(new Date());
+            let checkDate = new Date();
+
+            for (let i = 0; i < sorted.length; i++) {
+                const summary = sorted[i];
+                const expectedDate = formatDate(checkDate);
+
+                if (summary.date === expectedDate && summary.completed) {
+                    if (currentStreak === 0 && summary.date === today) {
+                        currentStreak++;
+                        lastActive = summary.date;
+                    } else if (currentStreak > 0) {
+                        currentStreak++;
+                    }
+                    checkDate.setDate(checkDate.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+
+            // Calculate longest streak
+            tempStreak = 0;
+            for (let i = 0; i < sorted.length; i++) {
+                if (sorted[i].completed) {
+                    tempStreak++;
+                    longestStreak = Math.max(longestStreak, tempStreak);
+                } else {
+                    tempStreak = 0;
+                }
+            }
+
+            return {
+                current: currentStreak,
+                longest: Math.max(longestStreak, currentStreak),
+                lastActive: lastActive || (sorted[0]?.completed ? sorted[0].date : null)
+            };
+        };
+
+
+        // --- COMPONENT: TRACKER TAB ---
+        const TrackerTab = ({ dailyLog, dailyGoal, setDailyGoal, foods, addLog, removeLog, convertLogToRecipe }) => {
+            const [trackerTypeFilter, setTrackerTypeFilter] = useState('cru');
+            const [selectedFoodId, setSelectedFoodId] = useState('');
+            const [weightInput, setWeightInput] = useState('');
+            const [caloriesInput, setCaloriesInput] = useState('');
+            const [isEditingGoal, setIsEditingGoal] = useState(false);
+            const [searchTerm, setSearchTerm] = useState('');
+
+            const totalCalories = dailyLog.reduce((acc, i) => acc + i.calories, 0);
+            const progress = Math.min((totalCalories / dailyGoal) * 100, 100);
+
+            const availableFoods = foods.filter(f =>
+                f.type === trackerTypeFilter &&
+                f.name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            const selectedFood = foods.find(f => f.id === parseInt(selectedFoodId));
+
+            useEffect(() => {
+                if (availableFoods.length > 0) {
+                    if (!selectedFood || !availableFoods.find(f => f.id === selectedFood.id)) {
+                        setSelectedFoodId(availableFoods[0].id.toString());
+                    }
+                }
+            }, [trackerTypeFilter, searchTerm, availableFoods]);
+
+            const handleWeightChange = (val) => {
+                setWeightInput(val);
+                if (val === '' || !selectedFood) { setCaloriesInput(''); return; }
+                setCaloriesInput(Math.round((parseFloat(val) / 100) * selectedFood.kcal).toString());
+            };
+
+            const handleCaloriesChange = (val) => {
+                setCaloriesInput(val);
+                if (val === '' || !selectedFood) { setWeightInput(''); return; }
+                setWeightInput(Math.round((parseFloat(val) * 100) / selectedFood.kcal).toString());
+            };
+
+            return (
+                <div className="space-y-6 pb-24 animate-slideUp">
+                    {/* Goal Card */}
+                    <div className="glass-panel p-6 rounded-3xl relative overflow-hidden transition-all">
+                        <div className="relative z-10 text-white">
+                            <div className="flex justify-between items-end mb-2">
+                                <div>
+                                    <p className="text-secondary text-sm font-bold uppercase tracking-widest">Restant</p>
+                                    <h2 className="text-5xl font-black tracking-tighter tabular-nums">{dailyGoal - totalCalories} <span className="text-lg text-secondary font-normal">kcal</span></h2>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-secondary text-xs uppercase font-bold mb-1">Objectif</p>
+                                    {isEditingGoal ? (
+                                        <input
+                                            type="number"
+                                            className="bg-black/50 text-white w-24 text-right p-2 rounded-xl border-2 border-emerald-500 outline-none font-bold text-lg"
+                                            value={dailyGoal}
+                                            onChange={(e) => setDailyGoal(parseInt(e.target.value) || 0)}
+                                            onBlur={() => setIsEditingGoal(false)}
+                                            autoFocus
+                                        />
+                                    ) : (
+                                        <div onClick={() => setIsEditingGoal(true)} className="flex items-center justify-end gap-2 cursor-pointer py-1 group">
+                                            <Icons.Target size={14} className="text-secondary group-hover:text-emerald-400 transition-colors" />
+                                            <p className="text-xl font-bold text-secondary group-hover:text-white transition-colors">{dailyGoal}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="h-4 bg-black/40 rounded-full overflow-hidden mt-6 border border-white/5">
+                                <div className={`h-full transition-all duration-1000 ease-out bg-gradient-to-r ${dailyGoal - totalCalories < 0 ? 'from-red-500 to-red-600' : 'from-emerald-500 via-emerald-400 to-orange-400'}`} style={{ width: `${progress}%` }} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Input Area */}
+                    <div className="glass-panel p-5 rounded-3xl">
+                        <div className="flex bg-black/40 rounded-xl p-1 mb-4 border border-white/5">
+                            {['cru', 'cuit'].map(t => (
+                                <button key={t} onClick={() => setTrackerTypeFilter(t)} className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${trackerTypeFilter === t ? (t === 'cru' ? 'bg-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-orange-500 text-black shadow-[0_0_20px_rgba(249,115,22,0.3)]') : 'text-secondary hover:text-white'}`}>{t}</button>
+                            ))}
+                        </div>
+
+                        <div className="relative mb-4">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary"><Icons.Search size={18} /></div>
+                            <input
+                                type="text"
+                                placeholder="Chercher (ex: Riz, Poulet...)"
+                                className="w-full bg-black/40 text-white pl-11 pr-4 py-3 rounded-xl border border-white/5 focus:border-white/20 outline-none transition-colors placeholder:text-neutral-600 font-medium"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-4">
+                            <select
+                                className="w-full bg-black/40 text-white p-4 rounded-xl border border-white/5 appearance-none outline-none text-lg font-bold"
+                                value={selectedFoodId}
+                                onChange={(e) => setSelectedFoodId(e.target.value)}
+                            >
+                                {availableFoods.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                            </select>
+
+                            <div className="flex items-center gap-2">
+                                <div className="flex-1 relative">
+                                    <input type="number" placeholder="Grammes" className="w-full bg-black/40 text-white p-4 rounded-xl border border-white/5 outline-none text-center font-bold text-xl tabular-nums focus:border-emerald-500/50 transition-colors" value={weightInput} onChange={(e) => handleWeightChange(e.target.value)} />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-secondary font-bold uppercase pointer-events-none">g</span>
+                                </div>
+                                <div className="text-secondary"><Icons.ArrowRightLeft size={20} /></div>
+                                <div className="flex-1 relative">
+                                    <input type="number" placeholder="Kcal" className="w-full bg-black/40 text-emerald-400 p-4 rounded-xl border border-white/5 outline-none text-center font-bold text-xl tabular-nums focus:border-emerald-500/50 transition-colors" value={caloriesInput} onChange={(e) => handleCaloriesChange(e.target.value)} />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-emerald-500/50 font-bold uppercase pointer-events-none">cal</span>
+                                </div>
+                            </div>
+
+                            <button onClick={() => { addLog(selectedFood, weightInput, caloriesInput); setWeightInput(''); setCaloriesInput(''); }} className="w-full bg-white text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-emerald-500/20">
+                                <Icons.Plus size={20} /> AJOUTER
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Daily Log List */}
+                    <div className="space-y-3">
+                        <div className="flex justify-between items-center px-2">
+                            <h3 className="text-secondary text-sm font-bold uppercase tracking-widest">Aujourd'hui</h3>
+                            {dailyLog.length > 1 && <button onClick={convertLogToRecipe} className="text-xs font-bold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-colors"><Icons.Copy size={12} /> Créer recette</button>}
+                        </div>
+                        {dailyLog.map((item) => (
+                            <div key={item.id} className={`glass-panel p-4 rounded-xl flex justify-between items-center group border-l-4 ${item.type === 'cru' ? 'border-l-emerald-500' : 'border-l-orange-500'}`}>
+                                <div>
+                                    <div className="font-bold text-white flex items-baseline gap-2">{item.name} <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-black tracking-wider ${item.type === 'cru' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'}`}>{item.type}</span></div>
+                                    <div className="text-xs text-secondary mt-1 font-medium">{item.weight}g <span className="opacity-50 mx-1">•</span> {item.protein ? `${item.protein}g Prot` : ''}</div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="font-mono font-bold text-white text-lg">{item.calories}</div>
+                                    <button onClick={() => removeLog(item.id)} className="p-2 text-secondary hover:text-red-500 transition-colors"><Icons.Trash2 size={18} /></button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const FridgeTab = ({ foods, addCustomFood, removeFood }) => {
+            const [searchTerm, setSearchTerm] = useState('');
+            const [isAdding, setIsAdding] = useState(false);
+            const [form, setForm] = useState({ name: '', kcal: '', protein: '', type: 'cru' });
+
+            const filtered = foods.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+            return (
+                <div className="space-y-6 pb-24 animate-slideUp text-white">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-2xl font-bold tracking-tight">Mon Frigo</h2>
+                        <button onClick={() => setIsAdding(!isAdding)} className={`p-2 rounded-xl transition-all ${isAdding ? 'bg-white text-black rotate-45' : 'bg-emerald-500 text-black hover:scale-105'}`}><Icons.Plus size={24} /></button>
+                    </div>
+                    <div className="relative">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary"><Icons.Search size={20} /></div>
+                        <input type="text" placeholder="Chercher..." className="w-full bg-black/40 text-white pl-12 pr-4 py-3 rounded-xl border border-white/5 outline-none focus:border-white/20 transition-colors" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    </div>
+
+                    {isAdding && (
+                        <div className="glass-panel p-5 rounded-3xl space-y-4 animate-fadeIn">
+                            <h3 className="text-sm font-bold text-secondary uppercase">Nouvel Aliment</h3>
+                            <div className="flex bg-black/40 rounded-xl p-1 border border-white/5">
+                                {['cru', 'cuit'].map(t => (
+                                    <button key={t} onClick={() => setForm({ ...form, type: t })} className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase transition-all ${form.type === t ? (t === 'cru' ? 'bg-emerald-500 text-black' : 'bg-orange-500 text-black') : 'text-secondary'}`}>{t}</button>
+                                ))}
+                            </div>
+                            <input type="text" placeholder="Nom de l'aliment" className="w-full bg-black/40 text-white p-3 rounded-xl border border-white/5 outline-none" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                            <div className="grid grid-cols-2 gap-3">
+                                <input type="number" placeholder="Kcal / 100g" className="w-full bg-black/40 text-white p-3 rounded-xl border border-white/5 outline-none" value={form.kcal} onChange={(e) => setForm({ ...form, kcal: e.target.value })} />
+                                <input type="number" placeholder="Protéines" className="w-full bg-black/40 text-white p-3 rounded-xl border border-white/5 outline-none" value={form.protein} onChange={(e) => setForm({ ...form, protein: e.target.value })} />
+                            </div>
+                            <button onClick={() => {
+                                if (!form.name.trim() || !form.kcal || parseInt(form.kcal) <= 0) {
+                                    alert('Veuillez remplir le nom et les calories (valeur > 0)');
+                                    return;
+                                }
+                                addCustomFood({ name: form.name, kcal: parseInt(form.kcal), protein: parseFloat(form.protein) || 0, type: form.type });
+                                alert(`✅ "${form.name}" a été ajouté au frigo !`);
+                                setIsAdding(false);
+                                setForm({ name: '', kcal: '', protein: '', type: 'cru' });
+                            }} className="w-full bg-white text-black py-4 rounded-xl font-bold hover:scale-[1.02] transition-transform">ENREGISTRER</button>
+                        </div>
+                    )}
+
+                    <div className="space-y-3">
+                        {filtered.map(food => (
+                            <div key={food.id} className={`glass-panel p-4 rounded-xl flex justify-between items-center group border-l-4 ${food.type === 'cru' ? 'border-l-emerald-500/50' : 'border-l-orange-500/50'}`}>
+                                <div>
+                                    <div className="font-bold flex items-center gap-2">{food.name} <span className="text-[10px] text-secondary border border-white/10 px-1 rounded uppercase">{food.type}</span></div>
+                                    <div className="text-xs text-secondary mt-1">{food.kcal} kcal <span className="opacity-50">/</span> {food.protein || 0}g prot</div>
+                                </div>
+                                <button onClick={() => removeFood(food.id)} className="text-secondary hover:text-red-500 transition-colors"><Icons.Trash2 size={18} /></button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const RecipesTab = ({ recipes, foods, subView, setSubView, activeRecipe, setActiveRecipe, recipeForm, setRecipeForm, onAdd, onUpdate, onDelete, deletedRecipes, setDeletedRecipes }) => {
+            const [filterKcal, setFilterKcal] = useState(2000);
+            const [ingSearchTerm, setIngSearchTerm] = useState('');
+            const [addIngId, setAddIngId] = useState('');
+            const [addIngWeight, setAddIngWeight] = useState('');
+            const [addIngCalories, setAddIngCalories] = useState('');
+
+            const filteredIngFoods = foods.filter(f => f.name.toLowerCase().includes(ingSearchTerm.toLowerCase()));
+            const currentIngFood = foods.find(f => f.id === parseInt(addIngId));
+
+            // Auto-select first ingredient
+            useEffect(() => {
+                if (filteredIngFoods.length && !currentIngFood) setAddIngId(filteredIngFoods[0].id);
+            }, [filteredIngFoods]);
+
+            const handleIngWeightChange = (val) => {
+                setAddIngWeight(val);
+                if (val === '' || !currentIngFood) { setAddIngCalories(''); return; }
+                setAddIngCalories(Math.round((parseFloat(val) / 100) * currentIngFood.kcal).toString());
+            };
+
+            const handleIngCaloriesChange = (val) => {
+                setAddIngCalories(val);
+                if (val === '' || !currentIngFood) { setAddIngWeight(''); return; }
+                setAddIngWeight(Math.round((parseFloat(val) * 100) / currentIngFood.kcal).toString());
+            };
+
+            const saveRecipe = () => {
+                if (!recipeForm.name) return;
+                const totalKcal = recipeForm.ingredients.reduce((acc, ing) => acc + ing.calories, 0);
+                const finalRecipe = { ...recipeForm, calories: totalKcal };
+                if (finalRecipe.id) onUpdate(finalRecipe);
+                else onAdd(finalRecipe);
+                setSubView('list');
+            };
+
+            const addIngredientToForm = () => {
+                if (!currentIngFood || !addIngWeight) return;
+                const newIng = { id: currentIngFood.id, name: `${currentIngFood.name} (${currentIngFood.type})`, weight: parseInt(addIngWeight), calories: parseInt(addIngCalories) };
+                setRecipeForm({ ...recipeForm, ingredients: [...recipeForm.ingredients, newIng] });
+                setAddIngWeight(''); setAddIngCalories('');
+            };
+
+            if (subView === 'edit') return (
+                <div className="space-y-6 pb-24 animate-slideUp text-white">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => setSubView('list')} className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"><Icons.ArrowLeft size={20} /></button>
+                        <h2 className="text-2xl font-bold tracking-tight">Éditeur</h2>
+                    </div>
+                    <div className="glass-panel p-5 rounded-3xl space-y-4">
+                        <input type="text" className="w-full bg-black/40 text-white p-3 rounded-xl border border-white/5 font-bold outline-none focus:border-white/20 transition-colors" value={recipeForm.name} onChange={(e) => setRecipeForm({ ...recipeForm, name: e.target.value })} placeholder="Nom de la recette" />
+
+                        <div className="bg-black/40 p-3 rounded-2xl border border-white/5 space-y-3">
+                            <div className="relative">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary"><Icons.Search size={14} /></div>
+                                <input type="text" placeholder="Chercher ingrédient..." className="w-full bg-black/40 text-white pl-9 pr-3 py-2 rounded-xl text-sm outline-none border border-white/5 focus:border-white/20" value={ingSearchTerm} onChange={(e) => setIngSearchTerm(e.target.value)} />
+                            </div>
+                            <select className="w-full bg-black/40 text-white p-3 rounded-xl text-sm border border-white/5 outline-none" value={addIngId} onChange={(e) => setAddIngId(e.target.value)}>
+                                {filteredIngFoods.map(f => <option key={f.id} value={f.id}>{f.name} ({f.type})</option>)}
+                            </select>
+                            <div className="flex items-center gap-2">
+                                <input type="number" className="flex-1 bg-black/40 text-white p-3 rounded-xl text-center border border-white/5 outline-none" placeholder="Poids" value={addIngWeight} onChange={(e) => handleIngWeightChange(e.target.value)} />
+                                <input type="number" className="flex-1 bg-black/40 text-emerald-400 p-3 rounded-xl text-center border border-white/5 outline-none font-bold" placeholder="Kcal" value={addIngCalories} onChange={(e) => handleIngCaloriesChange(e.target.value)} />
+                                <button onClick={addIngredientToForm} className="bg-emerald-500 p-3 rounded-xl text-black hover:scale-105 transition-transform"><Icons.Plus size={18} /></button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            {recipeForm.ingredients.map((ing, idx) => (
+                                <div key={idx} className="flex justify-between bg-black/40 p-2 rounded-lg border border-white/5 text-sm items-center">
+                                    <span>{ing.name} <span className="text-secondary">• {ing.weight}g</span></span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-emerald-400 font-bold tabular-nums">{ing.calories}</span>
+                                        <button onClick={() => setRecipeForm({ ...recipeForm, ingredients: recipeForm.ingredients.filter((_, i) => i !== idx) })} className="text-secondary hover:text-red-500"><Icons.X size={14} /></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <button onClick={saveRecipe} className="w-full bg-white text-black font-bold py-4 rounded-xl flex justify-center gap-2 hover:scale-[1.02] transition-transform shadow-lg"><Icons.Save size={20} /> SAUVEGARDER</button>
+                    </div>
+                </div>
+            );
+
+            if (subView === 'detail' && activeRecipe) return (
+                <div className="space-y-6 pb-24 text-white animate-slideUp">
+                    <button onClick={() => setSubView('list')} className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors mb-4"><Icons.ArrowLeft size={20} /></button>
+                    <div className="glass-panel p-6 rounded-3xl relative overflow-hidden">
+                        <h2 className="text-3xl font-black mb-4 leading-none">{activeRecipe.name}</h2>
+                        <div className="mb-6 inline-flex items-center gap-2 font-bold text-orange-400 bg-orange-500/10 px-3 py-1 rounded-full"><Icons.Flame size={18} /> {activeRecipe.calories} kcal</div>
+                        <h3 className="font-bold mb-3 text-sm uppercase tracking-widest text-secondary">Ingrédients</h3>
+                        <div className="space-y-2">
+                            {activeRecipe.ingredients.map((ing, i) => (
+                                <div key={i} className="bg-black/40 p-3 rounded-xl flex justify-between border border-white/5">
+                                    <span>{ing.name}</span>
+                                    <span className="text-secondary">{ing.weight}g</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+
+            if (subView === 'trash') return (
+                <div className="space-y-6 pb-24 text-white animate-slideUp">
+                    <button onClick={() => setSubView('list')} className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"><Icons.ArrowLeft size={20} /></button>
+                    <h2 className="text-2xl font-bold tracking-tight">Corbeille</h2>
+                    {deletedRecipes.map(r => (
+                        <div key={r.id} className="glass-panel p-4 rounded-xl flex justify-between items-center opacity-70">
+                            <span>{r.name}</span>
+                            <button onClick={() => { onAdd(r); setDeletedRecipes(deletedRecipes.filter(x => x.id !== r.id)); }} className="text-emerald-400 p-2 hover:bg-emerald-500/10 rounded-lg"><Icons.RefreshCw size={18} /></button>
+                        </div>
+                    ))}
+                    <button onClick={() => setDeletedRecipes([])} className="w-full p-4 border border-red-500/30 text-red-400 rounded-2xl hover:bg-red-500/10 transition-colors">Tout vider</button>
+                </div>
+            );
+
+            return (
+                <div className="space-y-6 pb-24 animate-slideUp text-white">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-2xl font-bold tracking-tight">Recettes</h2>
+                        <button onClick={() => setSubView('trash')} className="p-2 rounded-xl bg-white/5 text-secondary relative hover:bg-white/10 transition-colors">
+                            <Icons.Trash2 size={20} />
+                            {deletedRecipes.length > 0 && <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-bounce" />}
+                        </button>
+                    </div>
+                    <button onClick={() => { setRecipeForm({ id: null, name: '', emoji: '🍲', instructions: '', ingredients: [] }); setSubView('edit'); }} className="w-full py-6 border-2 border-dashed border-emerald-500/30 bg-emerald-500/5 text-emerald-400 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-500/10 transition-all group"><Icons.Plus size={24} className="group-hover:scale-110 transition-transform" /> Créer une recette</button>
+                    <div className="space-y-4">
+                        {recipes.map(recipe => (
+                            <div key={recipe.id} onClick={() => { setActiveRecipe(recipe); setSubView('detail'); }} className="glass-panel p-4 rounded-2xl flex justify-between items-center cursor-pointer group hover:bg-white/5 transition-colors">
+                                <div className="font-bold text-white group-hover:translate-x-1 transition-transform">{recipe.name}</div>
+                                <div className="flex items-center gap-4">
+                                    <div className="text-orange-400 font-bold tabular-nums">{recipe.calories} kcal</div>
+                                    <button onClick={(e) => { e.stopPropagation(); setRecipeForm(recipe); setSubView('edit'); }} className="p-2 text-secondary hover:text-white transition-colors"><Icons.Edit2 size={16} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); setDeletedRecipes([recipe, ...deletedRecipes]); onDelete(recipe.id); }} className="p-2 text-secondary hover:text-red-400 transition-colors"><Icons.Trash2 size={16} /></button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- COMPONENT: STATS TAB ---
+        const StatsTab = ({ dailySummaries, currentStreak, longestStreak }) => {
+            const [selectedMonth, setSelectedMonth] = useState(new Date());
+            const [selectedDay, setSelectedDay] = useState(null);
+
+            const monthDays = getMonthDays(selectedMonth.getFullYear(), selectedMonth.getMonth());
+            const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+            const dayNames = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+
+            // Calculate monthly stats
+            const monthStart = formatDate(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1));
+            const monthEnd = formatDate(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0));
+            const monthSummaries = dailySummaries.filter(s => s.date >= monthStart && s.date <= monthEnd);
+            const daysLogged = monthSummaries.length;
+            const avgCalories = daysLogged > 0 ? Math.round(monthSummaries.reduce((sum, s) => sum + s.totalCalories, 0) / daysLogged) : 0;
+            const completedDays = monthSummaries.filter(s => s.completed).length;
+            const achievementRate = daysLogged > 0 ? Math.round((completedDays / daysLogged) * 100) : 0;
+
+            const getSummaryForDate = (date) => {
+                if (!date) return null;
+                const dateStr = formatDate(date);
+                return dailySummaries.find(s => s.date === dateStr);
+            };
+
+            const getCompletionColor = (summary) => {
+                if (!summary) return 'bg-white/5';
+                const percentage = (summary.totalCalories / summary.goal) * 100;
+                if (percentage < 50) return 'bg-red-500/40';
+                if (percentage < 90) return 'bg-yellow-500/40';
+                if (percentage <= 110) return 'bg-emerald-500/60';
+                return 'bg-blue-500/60';
+            };
+
+            const prevMonth = () => {
+                setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1));
+            };
+
+            const nextMonth = () => {
+                const now = new Date();
+                if (selectedMonth.getMonth() < now.getMonth() || selectedMonth.getFullYear() < now.getFullYear()) {
+                    setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1));
+                }
+            };
+
+            return (
+                <div className="space-y-6 pb-24 animate-slideUp text-white">
+                    {/* Streak Hero Card */}
+                    <div className="glass-panel p-8 rounded-3xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-500/20 to-transparent rounded-full blur-3xl" />
+                        <div className="relative z-10 text-center">
+                            <div className="text-6xl mb-4 animate-pulse">🔥</div>
+                            <div className="text-7xl font-black tabular-nums text-transparent bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text mb-2">
+                                {currentStreak}
+                            </div>
+                            <p className="text-secondary text-sm uppercase tracking-widest font-bold mb-4">
+                                {currentStreak === 0 ? 'Commencez votre série !' : currentStreak === 1 ? 'Jour de série' : 'Jours de série'}
+                            </p>
+                            {longestStreak > 0 && (
+                                <div className="inline-flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10">
+                                    <Icons.Award size={16} className="text-yellow-400" />
+                                    <span className="text-sm font-bold">Record: {longestStreak} jours</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Monthly Stats Cards */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="glass-panel p-4 rounded-2xl">
+                            <p className="text-xs text-secondary uppercase font-bold mb-1">Jours suivis</p>
+                            <p className="text-3xl font-black">{daysLogged}</p>
+                        </div>
+                        <div className="glass-panel p-4 rounded-2xl">
+                            <p className="text-xs text-secondary uppercase font-bold mb-1">Taux de réussite</p>
+                            <p className="text-3xl font-black text-emerald-400">{achievementRate}%</p>
+                        </div>
+                        <div className="glass-panel p-4 rounded-2xl">
+                            <p className="text-xs text-secondary uppercase font-bold mb-1">Moy. calories</p>
+                            <p className="text-3xl font-black">{avgCalories}</p>
+                        </div>
+                        <div className="glass-panel p-4 rounded-2xl">
+                            <p className="text-xs text-secondary uppercase font-bold mb-1">Jours validés</p>
+                            <p className="text-3xl font-black text-emerald-400">{completedDays}</p>
+                        </div>
+                    </div>
+
+                    {/* Calendar */}
+                    <div className="glass-panel p-5 rounded-3xl">
+                        {/* Month Navigation */}
+                        <div className="flex justify-between items-center mb-4">
+                            <button onClick={prevMonth} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
+                                <Icons.ChevronLeft size={20} />
+                            </button>
+                            <h3 className="font-bold text-lg">
+                                {monthNames[selectedMonth.getMonth()]} {selectedMonth.getFullYear()}
+                            </h3>
+                            <button
+                                onClick={nextMonth}
+                                className={`p-2 hover:bg-white/5 rounded-xl transition-colors ${selectedMonth.getMonth() === new Date().getMonth() &&
+                                    selectedMonth.getFullYear() === new Date().getFullYear()
+                                    ? 'opacity-30 cursor-not-allowed' : ''
+                                    }`}
+                                disabled={selectedMonth.getMonth() === new Date().getMonth() && selectedMonth.getFullYear() === new Date().getFullYear()}
+                            >
+                                <Icons.ChevronRight size={20} />
+                            </button>
+                        </div>
+
+                        {/* Day Headers */}
+                        <div className="grid grid-cols-7 gap-1 mb-2">
+                            {dayNames.map((day, i) => (
+                                <div key={i} className="text-center text-xs text-secondary font-bold py-1">
+                                    {day}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Calendar Grid */}
+                        <div className="grid grid-cols-7 gap-1">
+                            {monthDays.map((day, idx) => {
+                                if (!day) {
+                                    return <div key={`empty-${idx}`} className="aspect-square" />;
+                                }
+
+                                const summary = getSummaryForDate(day);
+                                const isTodayDay = isToday(day);
+                                const isFuture = day > new Date();
+
+                                return (
+                                    <button
+                                        key={idx}
+                                        onClick={() => summary && setSelectedDay(summary)}
+                                        disabled={isFuture || !summary}
+                                        className={`
+                                            aspect-square rounded-xl flex flex-col items-center justify-center text-sm relative
+                                            transition-all
+                                            ${isFuture ? 'opacity-20 cursor-not-allowed' : ''}
+                                            ${isTodayDay ? 'ring-2 ring-emerald-400' : ''}
+                                            ${summary ? 'hover:scale-110 cursor-pointer' : 'opacity-40'}
+                                        `}
+                                    >
+                                        <div className={`absolute inset-0 rounded-xl ${getCompletionColor(summary)}`} />
+                                        <span className={`relative z-10 font-bold ${isTodayDay ? 'text-white' : summary ? 'text-white' : 'text-secondary'}`}>
+                                            {day.getDate()}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Legend */}
+                        <div className="mt-4 pt-4 border-t border-white/5">
+                            <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded bg-red-500/40" />
+                                    <span className="text-secondary">&lt;50%</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded bg-yellow-500/40" />
+                                    <span className="text-secondary">50-90%</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded bg-emerald-500/60" />
+                                    <span className="text-secondary">90-110%</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded bg-blue-500/60" />
+                                    <span className="text-secondary">&gt;110%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Day Detail Modal */}
+                    {selectedDay && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedDay(null)}>
+                            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+                            <div className="glass-panel p-6 rounded-3xl max-w-sm w-full relative z-10 animate-fadeIn" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h3 className="font-bold text-lg">{new Date(selectedDay.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
+                                        <p className="text-secondary text-sm">Détails du jour</p>
+                                    </div>
+                                    <button onClick={() => setSelectedDay(null)} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
+                                        <Icons.X size={20} />
+                                    </button>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center py-2 border-b border-white/5">
+                                        <span className="text-secondary">Calories consommées</span>
+                                        <span className="font-bold text-xl">{selectedDay.totalCalories}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-2 border-b border-white/5">
+                                        <span className="text-secondary">Objectif</span>
+                                        <span className="font-bold text-xl">{selectedDay.goal}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-2">
+                                        <span className="text-secondary">Statut</span>
+                                        <span className={`font-bold ${selectedDay.completed ? 'text-emerald-400' : 'text-orange-400'}`}>
+                                            {selectedDay.completed ? '✓ Objectif atteint' : '○ Non atteint'}
+                                        </span>
+                                    </div>
+                                    <div className="h-2 bg-black/40 rounded-full overflow-hidden mt-4">
+                                        <div
+                                            className={`h-full transition-all ${selectedDay.completed ? 'bg-emerald-500' : 'bg-orange-500'}`}
+                                            style={{ width: `${Math.min((selectedDay.totalCalories / selectedDay.goal) * 100, 100)}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- APP CONTAINER ---
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [view, setView] = useState('landing');
+            const [showAuth, setShowAuth] = useState(false);
+            const [loading, setLoading] = useState(true);
+
+            // App Data
+            const [customFoods, setCustomFoods] = useState([]);
+            const [deletedFoodIds, setDeletedFoodIds] = useState([]);
+            const [recipes, setRecipes] = useState([]);
+            const [dailyLog, setDailyLog] = useState([]);
+            const [dailyGoal, setDailyGoal] = useState(2500);
+            const [activeTab, setActiveTab] = useState('tracker');
+
+            // Lifted State for Recipes
+            const [subView, setSubView] = useState('list');
+            const [activeRecipe, setActiveRecipe] = useState(null);
+            const [recipeForm, setRecipeForm] = useState({ id: null, name: '', emoji: '🍲', instructions: '', ingredients: [] });
+            const [deletedRecipes, setDeletedRecipes] = useState([]);
+
+            // State for Streak & Stats
+            const [dailySummaries, setDailySummaries] = useState([]);
+            const [currentStreak, setCurrentStreak] = useState(0);
+            const [longestStreak, setLongestStreak] = useState(0);
+
+            useEffect(() => { if (!auth) { setLoading(false); return; } const unsub = auth.onAuthStateChanged(u => { setUser(u); setLoading(false); if (u) setView('app'); }); return () => unsub(); }, []);
+
+            // Load from localStorage in demo mode
+            useEffect(() => {
+                if (!user) {
+                    const savedFoods = localStorage.getItem('customFoods');
+                    const savedDeleted = localStorage.getItem('deletedFoodIds');
+                    if (savedFoods) {
+                        try {
+                            setCustomFoods(JSON.parse(savedFoods));
+                        } catch (e) {
+                            console.error('Error loading custom foods:', e);
+                        }
+                    }
+                    if (savedDeleted) {
+                        try {
+                            setDeletedFoodIds(JSON.parse(savedDeleted));
+                        } catch (e) {
+                            console.error('Error loading deleted food IDs:', e);
+                        }
+                    }
+                }
+            }, [user]);
+
+            useEffect(() => {
+                if (!user || !db) return;
+                const safeMap = (snap) => snap?.docs ? snap.docs.map(d => ({ ...d.data(), id: d.id })) : [];
+                const unsubFoods = db.collection('users').doc(user.uid).collection('custom_foods').onSnapshot(snap => setCustomFoods(safeMap(snap)));
+                const unsubRec = db.collection('users').doc(user.uid).collection('recipes').onSnapshot(snap => setRecipes(safeMap(snap)));
+                const unsubLog = db.collection('users').doc(user.uid).collection('logs').orderBy('timestamp', 'desc').limit(50).onSnapshot(snap => setDailyLog(safeMap(snap)));
+                const unsubMeta = db.collection('users').doc(user.uid).onSnapshot(doc => {
+                    if (doc.exists || (doc.data && doc.data())) {
+                        const data = doc.data() || {};
+                        setDailyGoal(data.dailyGoal || 2500);
+                        setDeletedFoodIds(data.deletedFoodIds || []);
+                    }
+                });
+                const unsubSummaries = db.collection('users').doc(user.uid).collection('daily_summaries').orderBy('date', 'desc').limit(90).onSnapshot(snap => setDailySummaries(safeMap(snap)));
+                return () => { unsubFoods(); unsubRec(); unsubLog(); unsubMeta(); unsubSummaries(); };
+            }, [user]);
+
+            // Calculate streaks when summaries change
+            useEffect(() => {
+                if (dailySummaries.length > 0) {
+                    const streakData = calculateStreak(dailySummaries);
+                    setCurrentStreak(streakData.current);
+                    setLongestStreak(streakData.longest);
+                }
+            }, [dailySummaries]);
+
+            // Auto-save daily summary (debounced)
+            useEffect(() => {
+                const saveDailySummary = async () => {
+                    const today = formatDate(new Date());
+                    const totalCals = dailyLog.reduce((sum, log) => sum + log.calories, 0);
+                    const completed = totalCals >= (dailyGoal * 0.9);
+
+                    const summaryData = {
+                        date: today,
+                        totalCalories: totalCals,
+                        goal: dailyGoal,
+                        completed: completed
+                    };
+
+                    if (user && db) {
+                        await db.collection('users').doc(user.uid).collection('daily_summaries').doc(today).set(summaryData, { merge: true });
+                    } else {
+                        // Update local state for demo mode
+                        setDailySummaries(prev => {
+                            const existing = prev.find(s => s.date === today);
+                            if (existing) {
+                                return prev.map(s => s.date === today ? { ...s, ...summaryData } : s);
+                            } else {
+                                return [summaryData, ...prev];
+                            }
+                        });
+                    }
+                };
+
+                const timer = setTimeout(saveDailySummary, 2000);
+                return () => clearTimeout(timer);
+            }, [dailyLog, dailyGoal, user]);
+
+            const allFoods = useMemo(() => {
+                const initial = INITIAL_FOODS.filter(f => !deletedFoodIds.includes(f.id));
+                return [...customFoods, ...initial].sort((a, b) => a.name.localeCompare(b.name));
+            }, [customFoods, deletedFoodIds]);
+
+            const addLog = async (food, weight, cal) => {
+                const entry = { foodId: food.id, name: food.name, type: food.type, weight: parseInt(weight), calories: parseInt(cal), protein: ((parseInt(weight) / 100) * (food.protein || 0)).toFixed(1), timestamp: firebase.firestore.FieldValue.serverTimestamp() };
+                if (user && db) await db.collection('users').doc(user.uid).collection('logs').add(entry);
+                else setDailyLog([entry, ...dailyLog]);
+            };
+            const removeLog = async (id) => { if (user && db) await db.collection('users').doc(user.uid).collection('logs').doc(id).delete(); else setDailyLog(dailyLog.filter(l => l.id !== id)); };
+            const addCustomFood = async (f) => {
+                if (user && db) {
+                    await db.collection('users').doc(user.uid).collection('custom_foods').add(f);
+                } else {
+                    const newFood = { ...f, id: Date.now() };
+                    const updated = [...customFoods, newFood];
+                    setCustomFoods(updated);
+                    localStorage.setItem('customFoods', JSON.stringify(updated));
+                }
+            };
+            const removeFood = async (id) => {
+                if (user && db) {
+                    if (typeof id === 'string') {
+                        await db.collection('users').doc(user.uid).collection('custom_foods').doc(id).delete();
+                    } else {
+                        await db.collection('users').doc(user.uid).set({ deletedFoodIds: firebase.firestore.FieldValue.arrayUnion(id) }, { merge: true });
+                    }
+                } else {
+                    if (typeof id === 'string') {
+                        const updated = customFoods.filter(f => f.id !== id);
+                        setCustomFoods(updated);
+                        localStorage.setItem('customFoods', JSON.stringify(updated));
+                    } else {
+                        const updated = [...deletedFoodIds, id];
+                        setDeletedFoodIds(updated);
+                        localStorage.setItem('deletedFoodIds', JSON.stringify(updated));
+                    }
+                }
+            };
+
+            // Recipe Actions
+            const addRecipe = async (r) => { if (user && db) await db.collection('users').doc(user.uid).collection('recipes').add(r); else setRecipes([...recipes, { ...r, id: Date.now() }]); };
+            const updateRecipe = async (r) => { if (user && db) await db.collection('users').doc(user.uid).collection('recipes').doc(r.id).set(r, { merge: true }); else setRecipes(recipes.map(x => x.id === r.id ? r : x)); };
+            const deleteRecipe = async (id) => { if (user && db) await db.collection('users').doc(user.uid).collection('recipes').doc(id).delete(); else setRecipes(recipes.filter(x => x.id !== id)); };
+
+            const convertLogToRecipe = () => {
+                setRecipeForm({
+                    id: null,
+                    name: 'Recette du jour',
+                    emoji: '🍲',
+                    instructions: '',
+                    ingredients: dailyLog.map(i => ({ id: i.foodId || Date.now(), name: `${i.name} (${i.type})`, weight: i.weight, calories: i.calories }))
+                });
+                setActiveTab('recipes');
+                setSubView('edit');
+            };
+
+            if (loading) return null;
+
+            return (
+                <div className="font-sans selection:bg-emerald-500/30">
+                    {showAuth && <AuthModal onClose={() => setShowAuth(false)} onLoginSuccess={() => setShowAuth(false)} />}
+
+                    {view === 'landing' ? <Landing /> : (
+                        <div className="max-w-md mx-auto min-h-screen relative pt-6 p-4 text-white">
+                            <WaveBackground />
+                            <div className="flex justify-between items-center mb-6">
+                                <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-orange-400 text-black rounded-lg flex items-center justify-center font-black italic">C</div>
+                                    <span>CALTRACKER</span>
+                                </div>
+                                <button onClick={() => auth.signOut().then(() => setView('landing'))} className="bg-white/5 p-2 rounded-full hover:bg-white/10"><Icons.LogOut size={18} /></button>
+                            </div>
+
+                            {activeTab === 'tracker' && <TrackerTab dailyLog={dailyLog} dailyGoal={dailyGoal} setDailyGoal={setDailyGoal} foods={allFoods} addLog={addLog} removeLog={removeLog} convertLogToRecipe={convertLogToRecipe} />}
+                            {activeTab === 'fridge' && <FridgeTab foods={allFoods} addCustomFood={addCustomFood} removeFood={removeFood} />}
+                            {activeTab === 'recipes' && <RecipesTab recipes={recipes} foods={allFoods} subView={subView} setSubView={setSubView} activeRecipe={activeRecipe} setActiveRecipe={setActiveRecipe} recipeForm={recipeForm} setRecipeForm={setRecipeForm} onAdd={addRecipe} onUpdate={updateRecipe} onDelete={deleteRecipe} deletedRecipes={deletedRecipes} setDeletedRecipes={setDeletedRecipes} />}
+                            {activeTab === 'stats' && <StatsTab dailySummaries={dailySummaries} currentStreak={currentStreak} longestStreak={longestStreak} />}
+
+                            <div className="fixed bottom-0 left-0 w-full bg-black/90 backdrop-blur-xl border-t border-white/10 pb-6 pt-2 z-50">
+                                <div className="max-w-md mx-auto flex justify-around p-2">
+                                    <button onClick={() => setActiveTab('tracker')} className={`flex flex-col items-center gap-1 p-3 rounded-2xl w-16 transition-all ${activeTab === 'tracker' ? 'text-emerald-400 bg-emerald-500/10' : 'text-secondary hover:text-white'}`}>
+                                        <Icons.PieChart size={20} />
+                                        <span className="text-[9px] font-bold uppercase">Journal</span>
+                                    </button>
+                                    <button onClick={() => setActiveTab('fridge')} className={`flex flex-col items-center gap-1 p-3 rounded-2xl w-16 transition-all ${activeTab === 'fridge' ? 'text-emerald-400 bg-emerald-500/10' : 'text-secondary hover:text-white'}`}>
+                                        <Icons.Refrigerator size={20} />
+                                        <span className="text-[9px] font-bold uppercase">Frigo</span>
+                                    </button>
+                                    <button onClick={() => setActiveTab('recipes')} className={`flex flex-col items-center gap-1 p-3 rounded-2xl w-16 transition-all ${activeTab === 'recipes' ? 'text-emerald-400 bg-emerald-500/10' : 'text-secondary hover:text-white'}`}>
+                                        <Icons.BookOpen size={20} />
+                                        <span className="text-[9px] font-bold uppercase">Recettes</span>
+                                    </button>
+                                    <button onClick={() => setActiveTab('stats')} className={`flex flex-col items-center gap-1 p-3 rounded-2xl w-16 transition-all ${activeTab === 'stats' ? 'text-emerald-400 bg-emerald-500/10' : 'text-secondary hover:text-white'}`}>
+                                        <Icons.TrendingUp size={20} />
+                                        <span className="text-[9px] font-bold uppercase">Stats</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>
